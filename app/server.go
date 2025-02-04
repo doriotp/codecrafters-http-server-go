@@ -19,7 +19,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 	} else{
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
 }
