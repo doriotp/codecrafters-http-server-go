@@ -14,10 +14,12 @@ var _ = os.Exit
 func handler(w http.ResponseWriter, r *http.Request) {
 	// Extract the URL path
 	path := r.URL.Path
-
+	fmt.Println(path)
 	if path=="/"{
+		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 	} else{
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
 }
