@@ -62,17 +62,14 @@ func handleConnection(conn net.Conn) {
 
 	parts := strings.Fields(requestLine)
 
-	splittedParts := strings.Split(parts[1], "/")
-
-	if len(splittedParts) == 2 {
-		if splittedParts[1] == "" {
-			conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-		} else {
-			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
-		}
+	if parts[1] == "/" {
+		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	} else if strings.HasPrefix(parts[1], "/echo/") {
+		text := parts[1][6:]
+		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(text), text)
+		conn.Write([]byte(response))
 	} else {
-		resp := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %v\r\n\r\n%v", len(splittedParts[2]), splittedParts[2])
-		conn.Write([]byte(resp))
+		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
 
 }
