@@ -64,8 +64,15 @@ func handleConnection(conn net.Conn) {
 
 	splittedParts := strings.Split(parts[1], "/")
 
-	resp := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %v\r\n\r\n%v", len(splittedParts[2]), splittedParts[2])
-
-	conn.Write([]byte(resp))
+	if len(splittedParts) == 2 {
+		if splittedParts[1] == "" {
+			conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+		} else {
+			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		}
+	} else {
+		resp := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %v\r\n\r\n%v", len(splittedParts[2]), splittedParts[2])
+		conn.Write([]byte(resp))
+	}
 
 }
