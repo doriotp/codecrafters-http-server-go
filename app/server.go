@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
+	"strings"
 )
 
 // Ensures gofmt doesn't remove the "net" and "os" imports above (feel free to remove this!)
@@ -15,10 +17,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Extract the URL path
 	path := r.URL.Path
 	fmt.Println(path)
-	if path=="/"{
+	if path == "/" {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-	} else{
+	} else {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
@@ -30,27 +32,40 @@ func main() {
 
 	// Uncomment this block to pass the first stage
 	//
-	// l, err := net.Listen("tcp", "0.0.0.0:4221")
-	// if err != nil {
-	// 	fmt.Println("Failed to bind to port 4221")
-	// 	os.Exit(1)
-	// }
-	
-	// conn, err := l.Accept()
-	// if err != nil {
-	// 	fmt.Println("Error accepting connection: ", err.Error())
-	// 	os.Exit(1)
-	// }
+	l, err := net.Listen("tcp", "0.0.0.0:4221")
+	if err != nil {
+		fmt.Println("Failed to bind to port 4221")
+		os.Exit(1)
+	}
 
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection: ", err.Error())
+			os.Exit(1)
+		}
 
+		handleConnection(conn)
+	}
+}
 
-	// http.HandleFunc("/abcdefg", func(rw http.ResponseWriter, r *http.Request){
-	// 	rw.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
-	// })
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+	reader := bufio.NewReader(conn)
 
-	// http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request){
-	// 	rw.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-	// })
-	http.HandleFunc("/", handler)
-	http.ListenAndServe(":4221", nil)
+	// Read the first line (request line)
+	requestLine, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Failed to read request:", err)
+		return
+	}
+
+	parts := strings.Fields(requestLine)
+
+	if parts[1] == "/" {
+		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	} else {
+		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+	}
+
 }
