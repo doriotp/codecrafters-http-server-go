@@ -50,10 +50,12 @@ func main() {
 }
 
 func handleConnection(conn net.Conn) {
+	var (
+		userAgentValue string
+	)
 	defer conn.Close()
 	reader := bufio.NewReader(conn)
 
-	// Read the first line (request line)
 	requestLine, err := reader.ReadString('\n')
 	if err != nil {
 		fmt.Println("Failed to read request:", err)
@@ -61,13 +63,31 @@ func handleConnection(conn net.Conn) {
 	}
 
 	parts := strings.Fields(requestLine)
-
 	if parts[1] == "/" {
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 	} else if strings.HasPrefix(parts[1], "/echo/") {
 		text := parts[1][6:]
 		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(text), text)
 		conn.Write([]byte(response))
+	} else if strings.HasPrefix(parts[1], "/user-agent") {
+		for {
+			requestLine, err = reader.ReadString('\n')
+			if err != nil {
+				fmt.Println("Failed to read request:", err)
+				return
+			}
+
+			parts = strings.Fields(requestLine)
+
+			if parts[0] == "User-Agent:" {
+				userAgentValue = parts[1]
+				break
+			}
+		}
+
+		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgentValue), userAgentValue)
+		conn.Write([]byte(response))
+
 	} else {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
