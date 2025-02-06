@@ -13,7 +13,7 @@ var _ = net.Listen
 var _ = os.Exit
 
 func readFile(filename string) (string, error) {
-	data, err := os.ReadFile(fmt.Sprintf("/tmp/codecrafters-build-http-server-go/%v", filename))
+	data, err := os.ReadFile(fmt.Sprintf("/tmp/data/codecrafters-build-http-server-go/%v", filename))
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Println("File does not exist")
