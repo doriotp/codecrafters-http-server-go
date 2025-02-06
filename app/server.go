@@ -121,6 +121,8 @@ func handleConnection(conn net.Conn) {
 				}
 			}
 
+			fmt.Println(contentLength)
+
 			// Read the body based on Content-Length
 			if contentLength > 0 {
 				// body := make([]byte, contentLength)
