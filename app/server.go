@@ -91,6 +91,7 @@ func handleConnection(conn net.Conn) {
 	} else if strings.HasPrefix(parts[1], "/files/") {
 		dir := os.Args[2]
 		fileName := parts[1][7:]
+		fmt.Println(dir)
 		data, err := readFile(dir, fileName)
 		if err != nil {
 			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
