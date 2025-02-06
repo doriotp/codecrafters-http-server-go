@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"strings"
 )
@@ -13,17 +12,18 @@ import (
 var _ = net.Listen
 var _ = os.Exit
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	// Extract the URL path
-	path := r.URL.Path
-	fmt.Println(path)
-	if path == "/" {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-	} else {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+func readFile(filename string) (string, error) {
+	data, err := os.ReadFile(fmt.Sprintf("/tmp/%v", filename))
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println("File does not exist")
+		} else {
+			fmt.Println("Error reading file:", err)
+		}
+		return "", err
 	}
+
+	return string(data), nil
 }
 
 func main() {
@@ -88,6 +88,15 @@ func handleConnection(conn net.Conn) {
 		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgentValue), userAgentValue)
 		conn.Write([]byte(response))
 
+	} else if strings.HasPrefix(parts[1], "/files/") {
+		fileName := parts[1][7:]
+		data, err := readFile(fileName)
+		if err != nil {
+			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		} else {
+			response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(data), data)
+			conn.Write([]byte(response))
+		}
 	} else {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
