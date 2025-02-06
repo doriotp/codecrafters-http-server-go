@@ -12,9 +12,8 @@ import (
 var _ = net.Listen
 var _ = os.Exit
 
-func readFile(filename string) (string, error) {
-	var dir = fmt.Sprintf("/tmp/data/codecrafters.io/http-server-tester/%v", filename)
-	data, err := os.ReadFile(dir)
+func readFile(directory, filename string) (string, error) {
+	data, err := os.ReadFile(directory+filename)
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Println("File does not exist")
@@ -90,8 +89,9 @@ func handleConnection(conn net.Conn) {
 		conn.Write([]byte(response))
 
 	} else if strings.HasPrefix(parts[1], "/files/") {
+		dir := os.Args[2]
 		fileName := parts[1][7:]
-		data, err := readFile(fileName)
+		data, err := readFile(dir, fileName)
 		if err != nil {
 			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 		} else {
