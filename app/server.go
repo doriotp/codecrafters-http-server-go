@@ -3,8 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -13,7 +15,7 @@ var _ = net.Listen
 var _ = os.Exit
 
 func readFile(directory, filename string) (string, error) {
-	data, err := os.ReadFile(directory+filename)
+	data, err := os.ReadFile(directory + filename)
 	if err != nil {
 		if os.IsNotExist(err) {
 			fmt.Println("File does not exist")
@@ -52,6 +54,7 @@ func main() {
 func handleConnection(conn net.Conn) {
 	var (
 		userAgentValue string
+		contentLength  int
 	)
 	defer conn.Close()
 	reader := bufio.NewReader(conn)
@@ -91,13 +94,44 @@ func handleConnection(conn net.Conn) {
 	} else if strings.HasPrefix(parts[1], "/files/") {
 		dir := os.Args[2]
 		fileName := parts[1][7:]
-		fmt.Println(dir)
-		data, err := readFile(dir, fileName)
-		if err != nil {
-			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		if parts[0] == "GET:" {
+			fmt.Println(dir)
+			data, err := readFile(dir, fileName)
+			if err != nil {
+				conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			} else {
+				response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(data), data)
+				conn.Write([]byte(response))
+			}
 		} else {
-			response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(data), data)
-			conn.Write([]byte(response))
+			for {
+				requestLine, err = reader.ReadString('\n')
+				if err != nil {
+					fmt.Println("Failed to read request:", err)
+					return
+				}
+
+				parts = strings.Fields(requestLine)
+
+				if parts[0] == "Content-Length:" {
+					contentLength, _ = strconv.Atoi(parts[1])
+					break
+				}
+			}
+
+			// Read the body based on Content-Length
+			if contentLength > 0 {
+				// body := make([]byte, contentLength)
+				body, err := io.ReadAll(reader)
+				if err != nil {
+					fmt.Println("Failed to read body:", err)
+					return
+				}
+
+				os.WriteFile(dir+fileName, body, 0644)
+				conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
+
+			}
 		}
 	} else {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
