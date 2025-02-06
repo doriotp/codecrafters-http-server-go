@@ -94,7 +94,8 @@ func handleConnection(conn net.Conn) {
 	} else if strings.HasPrefix(parts[1], "/files/") {
 		dir := os.Args[2]
 		fileName := parts[1][7:]
-		if parts[0] == "GET:" {
+		fmt.Println(parts[0])
+		if parts[0] == "GET" {
 			fmt.Println(dir)
 			data, err := readFile(dir, fileName)
 			if err != nil {
@@ -104,6 +105,7 @@ func handleConnection(conn net.Conn) {
 				conn.Write([]byte(response))
 			}
 		} else {
+			fmt.Println(1)
 			for {
 				requestLine, err = reader.ReadString('\n')
 				if err != nil {
