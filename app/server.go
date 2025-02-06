@@ -121,8 +121,6 @@ func handleConnection(conn net.Conn) {
 				}
 			}
 
-			fmt.Println(contentLength)
-
 			// Read the body based on Content-Length
 			if contentLength > 0 {
 				// body := make([]byte, contentLength)
@@ -134,7 +132,8 @@ func handleConnection(conn net.Conn) {
 
 				fmt.Println(string(body))
 
-				os.WriteFile(dir+fileName, body, 0755)
+				err = os.WriteFile(dir+fileName, body, 0755)
+				fmt.Println(err)
 				conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
 
 			}
