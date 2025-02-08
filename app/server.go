@@ -130,9 +130,20 @@ func handleConnection(conn net.Conn) {
 					return
 				}
 
-				os.WriteFile(dir+fileName, body, 0644)
-				conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
+				err = os.MkdirAll(dir, os.ModePerm)
+				if err != nil {
+					fmt.Println("Failed to create directory:", err)
+					return
+				}
 
+				// Write the file
+				err = os.WriteFile(dir+fileName, body, 0644)
+				if err != nil {
+					fmt.Println("Failed to write file:", err)
+					return
+				}
+
+				conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
 			}
 		}
 	} else {
