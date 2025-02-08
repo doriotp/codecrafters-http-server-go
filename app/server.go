@@ -130,9 +130,7 @@ func handleConnection(conn net.Conn) {
 					return
 				}
 
-				file, err:= os.Create(dir + fileName)
-				fmt.Println(err)
-				file.WriteString(string(body))
+				os.WriteFile(dir+fileName, body, 0644)
 				conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
 
 			}
