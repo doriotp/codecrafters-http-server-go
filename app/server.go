@@ -42,7 +42,7 @@ func handleConn(conn net.Conn) {
 	if m == "GET" && p == "/" {
 		response = "HTTP/1.1 200 OK\r\n\r\n"
 	} else if m == "GET" && strings.HasPrefix(p, "/echo/") {
-		header := strings.Split(r[4], " ")
+		header := strings.Split(r[len(r)-3], " ")
 		if header[0] == "Accept-Encoding:" && header[1] == "gzip" {
 			response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Encoding:gzip\r\nContent-Type: text/plain\r\nContent-Length:%d\r\n\r\n%s", len(p[6:]), p[6:])
 		} else if header[0] == "Accept-Encoding:" && header[1] == "invalid-encoding" {
