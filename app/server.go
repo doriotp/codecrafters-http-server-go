@@ -1,153 +1,65 @@
 package main
-
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"net"
 	"os"
-	"strconv"
+	"path"
 	"strings"
 )
-
-// Ensures gofmt doesn't remove the "net" and "os" imports above (feel free to remove this!)
-var _ = net.Listen
-var _ = os.Exit
-
-func readFile(directory, filename string) (string, error) {
-	data, err := os.ReadFile(directory + filename)
-	if err != nil {
-		if os.IsNotExist(err) {
-			fmt.Println("File does not exist")
-		} else {
-			fmt.Println("Error reading file:", err)
-		}
-		return "", err
-	}
-
-	return string(data), nil
-}
-
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
-
 	// Uncomment this block to pass the first stage
-	//
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
 		fmt.Println("Failed to bind to port 4221")
 		os.Exit(1)
 	}
-
 	for {
 		conn, err := l.Accept()
 		if err != nil {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-
-		go handleConnection(conn)
+		go handleConn(conn)
 	}
 }
-
-func handleConnection(conn net.Conn) {
-	var (
-		userAgentValue string
-		contentLength  int
-	)
+func handleConn(conn net.Conn) {
 	defer conn.Close()
-	reader := bufio.NewReader(conn)
-
-	requestLine, err := reader.ReadString('\n')
+	buf := make([]byte, 1024)
+	_, err := conn.Read(buf)
 	if err != nil {
-		fmt.Println("Failed to read request:", err)
-		return
+		fmt.Println("Error handling request: ", err.Error())
+		os.Exit(1)
 	}
 
-	parts := strings.Fields(requestLine)
-	if parts[1] == "/" {
-		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-	} else if strings.HasPrefix(parts[1], "/echo/") {
-		text := parts[1][6:]
-		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(text), text)
-		conn.Write([]byte(response))
-	} else if strings.HasPrefix(parts[1], "/user-agent") {
-		for {
-			requestLine, err = reader.ReadString('\n')
-			if err != nil {
-				fmt.Println("Failed to read request:", err)
-				return
-			}
-
-			parts = strings.Fields(requestLine)
-
-			if parts[0] == "User-Agent:" {
-				userAgentValue = parts[1]
-				break
-			}
-		}
-
-		response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgentValue), userAgentValue)
-		conn.Write([]byte(response))
-
-	} else if strings.HasPrefix(parts[1], "/files/") {
+	r := strings.Split(string(buf), "\r\n")
+	m := strings.Split(r[0], " ")[0]
+	p := strings.Split(r[0], " ")[1]
+	fmt.Println(r)
+	var response string
+	if m == "GET" && p == "/" {
+		response = "HTTP/1.1 200 OK\r\n\r\n"
+	} else if m == "GET" && p[0:6] == "/echo/" {
+		response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length:%d\r\n\r\n%s", len(p[6:]), p[6:])
+	} else if m == "GET" && p == "/user-agent" {
+		ua := strings.Split(r[2], " ")[1]
+		response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length:%d\r\n\r\n%s", len(ua), ua)
+	} else if m == "GET" && p[0:7] == "/files/" {
 		dir := os.Args[2]
-		fileName := parts[1][7:]
-		fmt.Println(parts[0])
-		if parts[0] == "GET" {
-			fmt.Println(dir)
-			data, err := readFile(dir, fileName)
-			if err != nil {
-				conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
-			} else {
-				response := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(data), data)
-				conn.Write([]byte(response))
-			}
+		content, err := os.ReadFile(path.Join(dir, p[7:]))
+		if err != nil {
+			response = "HTTP/1.1 404 Not Found\r\n\r\n"
 		} else {
-			fmt.Println(1)
-			for {
-				requestLine, err = reader.ReadString('\n')
-				if err != nil {
-					fmt.Println("Failed to read request:", err)
-					return
-				}
-
-				parts = strings.Fields(requestLine)
-
-				if parts[0] == "Content-Length:" {
-					contentLength, _ = strconv.Atoi(parts[1])
-					break
-				}
-			}
-
-			// Read the body based on Content-Length
-			if contentLength > 0 {
-				// body := make([]byte, contentLength)
-				body, err := io.ReadAll(reader)
-				if err != nil {
-					fmt.Println("Failed to read body:", err)
-					return
-				}
-
-				err = os.MkdirAll(dir, os.ModePerm)
-				if err != nil {
-					fmt.Println("Failed to create directory:", err)
-					return
-				}
-
-				// Write the file
-				err = os.WriteFile(dir+fileName, body, 0644)
-				if err != nil {
-					fmt.Println("Failed to write file:", err)
-					return
-				}
-
-				conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
-			}
+			response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(content), string(content))
 		}
+	} else if m == "POST" && p[0:7] == "/files/" {
+		content := strings.Trim(r[len(r)-1], "\x00")
+		dir := os.Args[2]
+		_ = os.WriteFile(path.Join(dir, p[7:]), []byte(content), 0644)
+		response = "HTTP/1.1 201 Created\r\n\r\n"
 	} else {
-		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		response = "HTTP/1.1 404 Not Found\r\n\r\n"
 	}
-
+	conn.Write([]byte(response))
 }
