@@ -42,10 +42,21 @@ func handleConn(conn net.Conn) {
 	if m == "GET" && p == "/" {
 		response = "HTTP/1.1 200 OK\r\n\r\n"
 	} else if m == "GET" && strings.HasPrefix(p, "/echo/") {
+		var (
+			isPresent bool
+		)
 		header := strings.Split(r[len(r)-3], " ")
-		if header[0] == "Accept-Encoding:" && header[1] == "gzip" {
+		for i := range header {
+			currentValue := strings.TrimRight(header[i], ",")
+			if currentValue == "gzip" {
+				isPresent = true
+			}
+		}
+
+		fmt.Println(header, isPresent)
+		if header[0] == "Accept-Encoding:" && isPresent {
 			response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Encoding:gzip\r\nContent-Type: text/plain\r\nContent-Length:%d\r\n\r\n%s", len(p[6:]), p[6:])
-		} else if header[0] == "Accept-Encoding:" && header[1] == "invalid-encoding" {
+		} else if header[0] == "Accept-Encoding:" && !isPresent {
 			response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length:%d\r\n\r\n%s", len(p[6:]), p[6:])
 		} else {
 			response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length:%d\r\n\r\n%s", len(p[6:]), p[6:])
