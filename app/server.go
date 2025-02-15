@@ -1,4 +1,5 @@
 package main
+
 import (
 	"fmt"
 	"net"
@@ -6,6 +7,7 @@ import (
 	"path"
 	"strings"
 )
+
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
@@ -36,16 +38,22 @@ func handleConn(conn net.Conn) {
 	r := strings.Split(string(buf), "\r\n")
 	m := strings.Split(r[0], " ")[0]
 	p := strings.Split(r[0], " ")[1]
-	fmt.Println(r)
 	var response string
 	if m == "GET" && p == "/" {
 		response = "HTTP/1.1 200 OK\r\n\r\n"
-	} else if m == "GET" && strings.HasPrefix(p, "/echo/"){
-		response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length:%d\r\n\r\n%s", len(p[6:]), p[6:])
+	} else if m == "GET" && strings.HasPrefix(p, "/echo/") {
+		header := strings.Split(r[4], " ")
+		if header[0] == "Accept-Encoding:" && header[1] == "gzip" {
+			response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Encoding:gzip\r\nContent-Type: text/plain\r\nContent-Length:%d\r\n\r\n%s", len(p[6:]), p[6:])
+		} else if header[0] == "Accept-Encoding:" && header[1] == "invalid-encoding" {
+			response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length:%d\r\n\r\n%s", len(p[6:]), p[6:])
+		} else {
+			response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length:%d\r\n\r\n%s", len(p[6:]), p[6:])
+		}
 	} else if m == "GET" && p == "/user-agent" {
 		ua := strings.Split(r[2], " ")[1]
 		response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length:%d\r\n\r\n%s", len(ua), ua)
-	} else if m == "GET" && strings.HasPrefix(p,"/files/" ){
+	} else if m == "GET" && strings.HasPrefix(p, "/files/") {
 		dir := os.Args[2]
 		content, err := os.ReadFile(path.Join(dir, p[7:]))
 		if err != nil {
